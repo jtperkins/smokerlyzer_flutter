@@ -45,18 +45,24 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
                 }
                 
             case "handleRecovery":
+                print("[SMOKERLYZER_SWIFT] handleRecovery method called from Flutter")
                 do {
                     try await handleRecovery()
+                    print("[SMOKERLYZER_SWIFT] handleRecovery completed successfully")
                     result(nil)
                 } catch {
+                    print("[SMOKERLYZER_SWIFT] handleRecovery error: \(error)")
                     result(FlutterError(code: "RECOVERY_ERROR", message: error.localizedDescription, details: nil))
                 }
                 
             case "startBreathTestNoRecovery":
+                print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery called")
                 do {
                     let data = try await startBreathTestNoRecovery()
+                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery succeeded: \(data)")
                     result(data)
                 } catch {
+                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery error: \(error)")
                     result(FlutterError(code: "BREATH_TEST_ERROR", message: error.localizedDescription, details: nil))
                 }
                 
@@ -113,14 +119,20 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
     }
     
     private func handleRecovery() async throws {
+        print("[SMOKERLYZER_SWIFT] handleRecovery: entering")
         return try await withCheckedThrowingContinuation { continuation in
+            print("[SMOKERLYZER_SWIFT] handleRecovery: calling SDK handleRecovery...")
             smokerlyzerBluetooth.handleRecovery { result in
+                print("[SMOKERLYZER_SWIFT] handleRecovery: SDK callback received")
                 switch result {
                 case .success:
+                    print("[SMOKERLYZER_SWIFT] handleRecovery: SUCCESS")
                     continuation.resume()
                 case .failure(let error):
+                    print("[SMOKERLYZER_SWIFT] handleRecovery: FAILURE - \(error)")
                     continuation.resume(throwing: error)
                 @unknown default:
+                    print("[SMOKERLYZER_SWIFT] handleRecovery: UNKNOWN result")
                     continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
                 }
             }
@@ -128,11 +140,18 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
     }
     
     private func startBreathTestNoRecovery() async throws -> [String: Any] {
+        print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: entering withCheckedThrowingContinuation")
         return try await withCheckedThrowingContinuation { continuation in
+            print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: calling SDK...")
             smokerlyzerBluetooth.startBreathTestNoRecovery { [weak self] result in
-                guard self != nil else { return }
+                print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: SDK callback received")
+                guard self != nil else {
+                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: self is nil!")
+                    return
+                }
                 switch result {
                 case .success(let ppmResult):
+                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: success with ppm=\(ppmResult.latest)")
                     // Note: PPMResult only has 'latest' and 'state' - no 'max' property
                     // Using 'latest' as both values since SDK doesn't track max
                     let data: [String: Any] = [
@@ -160,20 +179,26 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
         
         switch update {
         case .success(let peripheralId):
+            print("[SMOKERLYZER_SWIFT] ConnectionUpdate: SUCCESS - \(peripheralId.name)")
             eventData["type"] = "SUCCESS"
             eventData["data"] = ["name": peripheralId.name, "uuid": peripheralId.uuid.uuidString]
         case .successNeedsRecovery(let peripheralId):
+            print("[SMOKERLYZER_SWIFT] ConnectionUpdate: SUCCESS_NEEDS_RECOVERY - \(peripheralId.name)")
             eventData["type"] = "SUCCESS_NEEDS_RECOVERY"
             eventData["data"] = ["name": peripheralId.name, "uuid": peripheralId.uuid.uuidString]
         case .zeroing:
+            print("[SMOKERLYZER_SWIFT] ConnectionUpdate: ZEROING")
             eventData["type"] = "ZEROING"
         case .failure(let error):
+            print("[SMOKERLYZER_SWIFT] ConnectionUpdate: FAILURE - \(error)")
             eventData["type"] = "FAILURE"
             eventData["error"] = error.localizedDescription
         @unknown default:
+            print("[SMOKERLYZER_SWIFT] ConnectionUpdate: UNKNOWN")
             eventData["type"] = "UNKNOWN"
         }
         
+        print("[SMOKERLYZER_SWIFT] Sending event to Flutter: \(eventData)")
         eventSink?(eventData)
     }
 }
