@@ -74,16 +74,19 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
     
     // MARK: - SDK Methods
     
+    @MainActor
     private func scanAndConnect() -> Bool {
         return smokerlyzerBluetooth.scanAndConnect { [weak self] update in
             self?.handleConnectionUpdate(update: update)
         }
     }
     
+    @MainActor
     private func disconnect() {
         smokerlyzerBluetooth.disconnect()
     }
     
+    @MainActor
     private func getIsConnected() async -> Bool {
         return await withCheckedContinuation { continuation in
             smokerlyzerBluetooth.getIsConnected { isConnected in
@@ -92,81 +95,98 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    @MainActor
     private func startBreathTest() async throws -> [String: Any] {
+        print("[SMOKERLYZER_SWIFT] startBreathTest: entering, isMainThread=\(Thread.isMainThread)")
         return try await withCheckedThrowingContinuation { continuation in
-            smokerlyzerBluetooth.startBreathTest { [weak self] result in
-                guard self != nil else { return }
-                switch result {
-                case .success(let ppmResult):
-                    // Note: PPMResult only has 'latest' and 'state' - no 'max' property
-                    // Using 'latest' as both values since SDK doesn't track max
-                    let data: [String: Any] = [
-                        "status": "success",
-                        "data": [
-                            "latest": ppmResult.latest,
-                            "max": ppmResult.latest,
-                            "state": String(reflecting: ppmResult.state)
-                        ]
-                    ]
-                    continuation.resume(returning: data)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                @unknown default:
-                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
-                }
-            }
-        }
-    }
-    
-    private func handleRecovery() async throws {
-        print("[SMOKERLYZER_SWIFT] handleRecovery: entering")
-        return try await withCheckedThrowingContinuation { continuation in
-            print("[SMOKERLYZER_SWIFT] handleRecovery: calling SDK handleRecovery...")
-            smokerlyzerBluetooth.handleRecovery { result in
-                print("[SMOKERLYZER_SWIFT] handleRecovery: SDK callback received")
-                switch result {
-                case .success:
-                    print("[SMOKERLYZER_SWIFT] handleRecovery: SUCCESS")
-                    continuation.resume()
-                case .failure(let error):
-                    print("[SMOKERLYZER_SWIFT] handleRecovery: FAILURE - \(error)")
-                    continuation.resume(throwing: error)
-                @unknown default:
-                    print("[SMOKERLYZER_SWIFT] handleRecovery: UNKNOWN result")
-                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
-                }
-            }
-        }
-    }
-    
-    private func startBreathTestNoRecovery() async throws -> [String: Any] {
-        print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: entering withCheckedThrowingContinuation")
-        return try await withCheckedThrowingContinuation { continuation in
-            print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: calling SDK...")
-            smokerlyzerBluetooth.startBreathTestNoRecovery { [weak self] result in
-                print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: SDK callback received")
-                guard self != nil else {
-                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: self is nil!")
+            // SDK requires main thread - ensure we're on it
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Plugin deallocated"]))
                     return
                 }
-                switch result {
-                case .success(let ppmResult):
-                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: success with ppm=\(ppmResult.latest)")
-                    // Note: PPMResult only has 'latest' and 'state' - no 'max' property
-                    // Using 'latest' as both values since SDK doesn't track max
-                    let data: [String: Any] = [
-                        "status": "success",
-                        "data": [
-                            "latest": ppmResult.latest,
-                            "max": ppmResult.latest,
-                            "state": String(reflecting: ppmResult.state)
+                print("[SMOKERLYZER_SWIFT] startBreathTest: calling SDK on main thread=\(Thread.isMainThread)")
+                self.smokerlyzerBluetooth.startBreathTest { result in
+                    print("[SMOKERLYZER_SWIFT] startBreathTest: SDK callback received")
+                    switch result {
+                    case .success(let ppmResult):
+                        let data: [String: Any] = [
+                            "status": "success",
+                            "data": [
+                                "latest": ppmResult.latest,
+                                "max": ppmResult.latest,
+                                "state": String(reflecting: ppmResult.state)
+                            ]
                         ]
-                    ]
-                    continuation.resume(returning: data)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                @unknown default:
-                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
+                        continuation.resume(returning: data)
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    @unknown default:
+                        continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
+                    }
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func handleRecovery() async throws {
+        print("[SMOKERLYZER_SWIFT] handleRecovery: entering, isMainThread=\(Thread.isMainThread)")
+        return try await withCheckedThrowingContinuation { continuation in
+            // SDK requires main thread - ensure we're on it
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Plugin deallocated"]))
+                    return
+                }
+                print("[SMOKERLYZER_SWIFT] handleRecovery: calling SDK on main thread=\(Thread.isMainThread)")
+                self.smokerlyzerBluetooth.handleRecovery { result in
+                    print("[SMOKERLYZER_SWIFT] handleRecovery: SDK callback received")
+                    switch result {
+                    case .success:
+                        print("[SMOKERLYZER_SWIFT] handleRecovery: SUCCESS")
+                        continuation.resume()
+                    case .failure(let error):
+                        print("[SMOKERLYZER_SWIFT] handleRecovery: FAILURE - \(error)")
+                        continuation.resume(throwing: error)
+                    @unknown default:
+                        continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
+                    }
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func startBreathTestNoRecovery() async throws -> [String: Any] {
+        print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: entering, isMainThread=\(Thread.isMainThread)")
+        return try await withCheckedThrowingContinuation { continuation in
+            // SDK requires main thread - ensure we're on it
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Plugin deallocated"]))
+                    return
+                }
+                print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: calling SDK on main thread=\(Thread.isMainThread)")
+                self.smokerlyzerBluetooth.startBreathTestNoRecovery { result in
+                    print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: SDK callback received")
+                    switch result {
+                    case .success(let ppmResult):
+                        print("[SMOKERLYZER_SWIFT] startBreathTestNoRecovery: success with ppm=\(ppmResult.latest)")
+                        let data: [String: Any] = [
+                            "status": "success",
+                            "data": [
+                                "latest": ppmResult.latest,
+                                "max": ppmResult.latest,
+                                "state": String(reflecting: ppmResult.state)
+                            ]
+                        ]
+                        continuation.resume(returning: data)
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    @unknown default:
+                        continuation.resume(throwing: NSError(domain: "SmokerlyzerSDK", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown error"]))
+                    }
                 }
             }
         }
