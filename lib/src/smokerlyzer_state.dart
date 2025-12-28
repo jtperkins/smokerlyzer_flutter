@@ -101,9 +101,14 @@ class SmokerlyzerStatus {
 
   factory SmokerlyzerStatus.fromMap(Map<String, dynamic> map) {
     final typeString = map['type'] as String? ?? 'UNKNOWN';
+    // Convert nested data map properly from platform channel
+    final rawData = map['data'];
+    final Map<String, dynamic>? data = rawData is Map
+        ? Map<String, dynamic>.from(rawData)
+        : null;
     return SmokerlyzerStatus(
       state: SmokerlyzerStateExtension.fromString(typeString),
-      data: map['data'] as Map<String, dynamic>?,
+      data: data,
       errorMessage: map['error'] as String?,
     );
   }
