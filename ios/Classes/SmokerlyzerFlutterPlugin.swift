@@ -92,11 +92,13 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
                 guard self != nil else { return }
                 switch result {
                 case .success(let ppmResult):
+                    // Note: PPMResult only has 'latest' and 'state' - no 'max' property
+                    // Using 'latest' as both values since SDK doesn't track max
                     let data: [String: Any] = [
                         "status": "success",
                         "data": [
                             "latest": ppmResult.latest,
-                            "max": ppmResult.max,
+                            "max": ppmResult.latest,
                             "state": String(reflecting: ppmResult.state)
                         ]
                     ]
@@ -131,11 +133,13 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
                 guard self != nil else { return }
                 switch result {
                 case .success(let ppmResult):
+                    // Note: PPMResult only has 'latest' and 'state' - no 'max' property
+                    // Using 'latest' as both values since SDK doesn't track max
                     let data: [String: Any] = [
                         "status": "success",
                         "data": [
                             "latest": ppmResult.latest,
-                            "max": ppmResult.max,
+                            "max": ppmResult.latest,
                             "state": String(reflecting: ppmResult.state)
                         ]
                     ]
@@ -165,7 +169,7 @@ public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
             eventData["type"] = "ZEROING"
         case .failure(let error):
             eventData["type"] = "FAILURE"
-            eventData["error"] = error?.localizedDescription ?? "Unknown error"
+            eventData["error"] = error.localizedDescription
         @unknown default:
             eventData["type"] = "UNKNOWN"
         }
