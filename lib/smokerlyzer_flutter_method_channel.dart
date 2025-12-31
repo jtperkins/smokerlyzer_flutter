@@ -69,7 +69,7 @@ class MethodChannelSmokerlyzerFlutter extends SmokerlyzerFlutterPlatform {
     if (result == null) {
       throw const SmokerlyzerBreathTestException('No result returned');
     }
-    return BreathTestResult.fromMap(Map<String, dynamic>.from(result));
+    return BreathTestResult.fromMap(result);
   }
 
   @override
@@ -85,6 +85,6 @@ class MethodChannelSmokerlyzerFlutter extends SmokerlyzerFlutterPlatform {
     if (result == null) {
       throw const SmokerlyzerBreathTestException('No result returned');
     }
-    return BreathTestResult.fromMap(Map<String, dynamic>.from(result));
+    return BreathTestResult.fromMap(result);
   }
 }

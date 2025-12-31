@@ -15,13 +15,16 @@ class BreathTestResult {
     required this.state,
   });
 
-  factory BreathTestResult.fromMap(Map<String, dynamic> map) {
-    final data = map['data'] as Map<String, dynamic>? ?? map;
+  factory BreathTestResult.fromMap(Map rawMap) {
+    // Platform channel returns Map<Object?, Object?> - convert everything
+    final map = Map<String, dynamic>.from(rawMap);
+    final rawData = map['data'];
+    final data = rawData is Map ? Map<String, dynamic>.from(rawData) : map;
     return BreathTestResult(
       latestPpm: (data['latest'] as num?)?.toInt() ?? 0,
       maxPpm: (data['max'] as num?)?.toInt() ?? 0,
       state: BreathTestStateExtension.fromString(
-        data['state'] as String? ?? '',
+        (data['state'] ?? '').toString(),
       ),
     );
   }
