@@ -4,11 +4,22 @@ import SmokerlyzerSDK
 
 public class SmokerlyzerFlutterPlugin: NSObject, FlutterPlugin {
     private var eventSink: FlutterEventSink?
-    private let smokerlyzerBluetooth = SmokerlyzerBluetooth()
+    private var _smokerlyzerBluetooth: SmokerlyzerBluetooth?
+    
+    /// Lazily initialized Bluetooth manager - only created when first accessed
+    /// This prevents Bluetooth permission prompt on app startup
+    private var smokerlyzerBluetooth: SmokerlyzerBluetooth {
+        if _smokerlyzerBluetooth == nil {
+            _smokerlyzerBluetooth = SmokerlyzerBluetooth()
+            _smokerlyzerBluetooth?.register(connectionObserver: self)
+        }
+        return _smokerlyzerBluetooth!
+    }
     
     override init() {
         super.init()
-        smokerlyzerBluetooth.register(connectionObserver: self)
+        // Note: smokerlyzerBluetooth is now lazily initialized
+        // It will be created on first use (e.g., scanAndConnect)
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {

@@ -15,14 +15,27 @@ import com.bedfont.icosdk.ble.v2.SmokerlyzerBluetoothLeManager.ConnectCodeConsta
 class SmokerlyzerFlutterPlugin: FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
-    private lateinit var smokerlyzerManager: SmokerlyzerBluetoothLeManager
+    private var _smokerlyzerManager: SmokerlyzerBluetoothLeManager? = null
     private lateinit var context: Context
     private var eventSink: EventChannel.EventSink? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    /**
+     * Lazily initialized Bluetooth manager - only created when first accessed.
+     * This prevents Bluetooth permission prompt on app startup.
+     */
+    private val smokerlyzerManager: SmokerlyzerBluetoothLeManager
+        get() {
+            if (_smokerlyzerManager == null) {
+                _smokerlyzerManager = SmokerlyzerBluetoothLeManager.build(context)
+            }
+            return _smokerlyzerManager!!
+        }
+
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
-        smokerlyzerManager = SmokerlyzerBluetoothLeManager.build(context)
+        // Note: smokerlyzerManager is now lazily initialized
+        // It will be created on first use (e.g., scanAndConnect)
 
         methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "smokerlyzer_flutter")
         methodChannel.setMethodCallHandler(this)
